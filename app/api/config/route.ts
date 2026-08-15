@@ -1,0 +1,2 @@
+import { NextResponse } from 'next/server';
+export async function GET(){return NextResponse.json({vapidPublicKey:process.env.VAPID_PUBLIC_KEY||'',lightningConfigured:Boolean(process.env.LIGHTNING_FEED_URL),emailConfigured:Boolean(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_FROM),smsConfigured:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),fireLayerConfigured:Boolean(process.env.FIRMS_MAP_KEY),pollenConfigured:Boolean(process.env.POLLEN_FEED_URL)});}

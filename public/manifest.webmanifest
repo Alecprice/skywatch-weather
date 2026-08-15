@@ -1,0 +1,16 @@
+{
+  "name": "SkyWatch Weather",
+  "short_name": "SkyWatch",
+  "description": "Forecasts, live radar, severe weather alerts, and outdoor plan monitoring.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}],
+  "shortcuts": [
+    {"name":"Forecast","short_name":"Forecast","url":"/?tab=forecast","icons":[{"src":"/icon.svg","sizes":"any"}]},
+    {"name":"Live Radar","short_name":"Radar","url":"/?tab=radar","icons":[{"src":"/icon.svg","sizes":"any"}]},
+    {"name":"Outdoor Plans","short_name":"Plans","url":"/?tab=plans","icons":[{"src":"/icon.svg","sizes":"any"}]},
+    {"name":"Weather Alerts","short_name":"Alerts","url":"/?tab=alerts","icons":[{"src":"/icon.svg","sizes":"any"}]}
+  ]
+}
