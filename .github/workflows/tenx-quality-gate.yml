@@ -37,6 +37,9 @@ jobs:
       - name: Verify server store fallback semantics
         run: npm run test:store
 
+      - name: Verify severe alert state semantics
+        run: npm run test:alerts
+
       - name: Validate production smoke script
         run: node --check scripts/smoke-production.mjs
 
