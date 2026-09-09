@@ -7,6 +7,25 @@ const REDIS_UNAVAILABLE = Symbol('redis-unavailable');
 type StoreData = { monitors: Record<string, any> };
 type RedisResult = unknown | typeof REDIS_UNAVAILABLE;
 
+function isRecord(value: unknown): value is Record<string, any> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseMonitorValue(value: unknown): Record<string, any> | null {
+  if (typeof value !== 'string' || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseStoreData(value: unknown): StoreData {
+  if (!isRecord(value) || !isRecord(value.monitors)) return { monitors: {} };
+  return { monitors: value.monitors };
+}
+
 async function redis(command: any[]): Promise<RedisResult> {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -18,7 +37,7 @@ async function redis(command: any[]): Promise<RedisResult> {
 }
 
 async function readDev(): Promise<StoreData> {
-  try { return JSON.parse(await fs.readFile(DEV_FILE, 'utf8')); } catch { return { monitors: {} }; }
+  try { return parseStoreData(JSON.parse(await fs.readFile(DEV_FILE, 'utf8'))); } catch { return { monitors: {} }; }
 }
 async function writeDev(data: StoreData) { await fs.writeFile(DEV_FILE, JSON.stringify(data), 'utf8'); }
 
@@ -29,11 +48,14 @@ export async function setMonitor(id: string, value: any) {
 }
 export async function getMonitor(id: string) {
   const r = await redis(['GET', `skywatch:monitor:${id}`]);
-  if (r !== REDIS_UNAVAILABLE) return typeof r === 'string' ? JSON.parse(r) : null;
+  if (r !== REDIS_UNAVAILABLE) return parseMonitorValue(r);
   return (await readDev()).monitors[id] || null;
 }
 export async function listMonitors() {
   const ids = await redis(['SMEMBERS', 'skywatch:monitors']);
-  if (ids !== REDIS_UNAVAILABLE) return (await Promise.all((ids as string[]).map(async id => ({ id, data: await getMonitor(id) })))).filter(x => x.data);
+  if (ids !== REDIS_UNAVAILABLE) {
+    const safeIds = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
+    return (await Promise.all(safeIds.map(async id => ({ id, data: await getMonitor(id) })))).filter(x => x.data);
+  }
   const db = await readDev(); return Object.entries(db.monitors).map(([id, data]) => ({ id, data }));
 }
