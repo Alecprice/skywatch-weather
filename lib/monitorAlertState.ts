@@ -1,6 +1,10 @@
 type AlertFeature = {
   id?: string;
-  properties?: { severity?: string };
+  properties?: {
+    severity?: string;
+    event?: string;
+    headline?: string;
+  };
 };
 
 type AlertState = {
