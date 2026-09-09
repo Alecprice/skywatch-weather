@@ -36,9 +36,9 @@ export function weatherLabel(code = 0) {
   if (code <= 3) return 'Partly cloudy';
   if ([45, 48].includes(code)) return 'Fog';
   if (code >= 95) return 'Thunderstorms';
-  if (code >= 71 && code <= 86) return 'Snow';
+  if ([80, 81, 82].includes(code)) return 'Showers';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
   if (code >= 51 && code <= 67) return 'Rain';
-  if (code >= 80 && code <= 82) return 'Showers';
   return 'Mixed weather';
 }
 
