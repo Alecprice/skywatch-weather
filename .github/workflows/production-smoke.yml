@@ -1,0 +1,36 @@
+name: SkyWatch Production Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Production URL to verify
+        required: false
+        default: https://skywatch-weather-blue.vercel.app
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skywatch-production-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify production
+        env:
+          SKYWATCH_PRODUCTION_URL: ${{ inputs.url || 'https://skywatch-weather-blue.vercel.app' }}
+        run: npm run smoke:prod
