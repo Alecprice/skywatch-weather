@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listMonitors, setMonitor } from '@/lib/serverStore';
 import { dispatchMonitorNotification } from '@/lib/notifier';
+import { severeAlertDelta } from '@/lib/monitorAlertState';
 import { riskForPlan, rainTiming } from '@/lib/weather';
 export const dynamic = 'force-dynamic'; export const maxDuration = 60;
 async function getJson(url:string,headers?:Record<string,string>){const r=await fetch(url,{headers,cache:'no-store'});if(!r.ok)throw new Error(`${r.status}`);return r.json();}
@@ -14,7 +15,7 @@ export async function GET(req:NextRequest){
  const secret=process.env.CRON_SECRET;if(secret&&req.headers.get('authorization')!==`Bearer ${secret}`)return NextResponse.json({error:'Unauthorized'},{status:401});
  const monitors=await listMonitors();const summary:any[]=[];
  for(const {id,data:m} of monitors.slice(0,100)){try{const loc=m.location||m.plans?.[0]?.location;if(!loc)continue;const [w,a,aq,lt]=await Promise.all([weatherAt(loc.latitude,loc.longitude),alertsAt(loc.latitude,loc.longitude),m.preferences?.aqi?aqiAt(loc.latitude,loc.longitude):Promise.resolve(null),m.preferences?.lightning?lightningAt(loc.latitude,loc.longitude):Promise.resolve(null)]);const state={...(m.state||{})};const sent:string[]=[];
-   const severe=(a.features||[]).filter((x:any)=>['Extreme','Severe'].includes(x.properties?.severity));if(m.preferences?.officialSevere!==false&&severe[0]?.id&&severe[0].id!==state.alertId){const p=severe[0].properties;await dispatchMonitorNotification(m,p.event||'Severe weather alert',p.headline||'Official NWS alert is active','/?tab=alerts',true);state.alertId=severe[0].id;sent.push('severe');}
+   if(m.preferences?.officialSevere!==false){const delta=severeAlertDelta(a.features||[],state);for(const alert of delta.unseen){const p=alert.properties||{};await dispatchMonitorNotification(m,p.event||'Severe weather alert',p.headline||'Official NWS alert is active','/?tab=alerts',true);sent.push(`severe:${alert.id}`)}state.alertIds=delta.activeIds;delete state.alertId;}
    if(m.preferences?.planChanges!==false){for(const plan of(m.plans||[])){const risk:any=riskForPlan(plan,w,null),key=`plan:${plan.id}`,next={level:risk.level,rain:Math.round(risk.metrics?.rain||0),wind:Math.round(risk.metrics?.wind||0),high:Math.round(risk.metrics?.high||0),low:Math.round(risk.metrics?.low||0)};if(meaningfulPlanChange(state[key],next)&&['watch','bad'].includes(risk.level)){await dispatchMonitorNotification(m,`${plan.name}: ${risk.label}`,risk.reasons.join(' · '),'/?tab=plans');sent.push(key)}state[key]=next;}}
    if(m.preferences?.rainSoon){const rt:any=rainTiming(w),sig=rt?.kind+':'+(rt?.time||'');if(['starting','stopping'].includes(rt?.kind)&&state.rainTiming!==sig){await dispatchMonitorNotification(m,rt.kind==='starting'?'Rain may start soon':'Rain may ease soon',rt.label,'/');sent.push(`rain-${rt.kind}`)}state.rainTiming=sig;}
    if(m.preferences?.aqi&&typeof aq?.current?.us_aqi==='number'){const aqi=Math.round(aq.current.us_aqi),band=aqi>=151?'unhealthy':aqi>=101?'sensitive':'ok';if(band!=='ok'&&state.aqiBand!==band){await dispatchMonitorNotification(m,'Air quality alert',`US AQI is ${aqi} near ${loc.name}. Consider adjusting prolonged outdoor plans.`,'/?tab=health');sent.push('aqi')}state.aqiBand=band;}
