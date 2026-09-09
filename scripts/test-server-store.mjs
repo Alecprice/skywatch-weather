@@ -52,12 +52,34 @@ try {
   };
   assert.deepEqual(await store.getMonitor('live'), { source: 'redis' }, 'configured Redis values must remain authoritative');
 
+  for (const malformed of ['{bad-json', 'null', '[]', '"string"', '42']) {
+    globalThis.fetch = async (_url, options) => {
+      const command = JSON.parse(String(options?.body || '[]'));
+      const result = command[0] === 'GET' ? malformed : 'OK';
+      return new Response(JSON.stringify({ result }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    assert.equal(await store.getMonitor('corrupt'), null, `malformed Redis monitor value must fail closed: ${malformed}`);
+  }
+
+  globalThis.fetch = async (_url, options) => {
+    const command = JSON.parse(String(options?.body || '[]'));
+    const result = command[0] === 'SMEMBERS' ? { unexpected: true } : JSON.stringify({ source: 'redis' });
+    return new Response(JSON.stringify({ result }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  assert.deepEqual(await store.listMonitors(), [], 'malformed Redis set membership must not crash monitor listing');
+
   delete process.env.KV_REST_API_URL;
   delete process.env.KV_REST_API_TOKEN;
   await fs.writeFile(devFile, JSON.stringify({ monitors: { local: { source: 'dev' } } }), 'utf8');
   assert.deepEqual(await store.getMonitor('local'), { source: 'dev' }, 'the /tmp development fallback must still work when Redis is genuinely unconfigured');
 
-  console.log('PASS: SkyWatch server store distinguishes Redis misses from unconfigured development storage.');
+  for (const malformedDev of ['{bad-json', 'null', '[]', JSON.stringify({ monitors: [] })]) {
+    await fs.writeFile(devFile, malformedDev, 'utf8');
+    assert.equal(await store.getMonitor('local'), null, 'malformed development store data must fail closed');
+    assert.deepEqual(await store.listMonitors(), [], 'malformed development store data must expose an empty list');
+  }
+
+  console.log('PASS: SkyWatch server store contains malformed Redis and development persistence values.');
 } finally {
   globalThis.fetch = originalFetch;
   for (const [name, value] of Object.entries(originalEnv)) restoreEnv(name, value);
