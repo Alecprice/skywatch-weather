@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run test:weather && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:store": "node scripts/test-server-store.mjs",
     "test:alerts": "node scripts/test-monitor-alert-state.mjs",
+    "test:weather": "node scripts/test-weather-codes.mjs",
     "smoke:prod": "node scripts/smoke-production.mjs"
   },
   "dependencies": {
