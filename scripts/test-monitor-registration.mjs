@@ -58,4 +58,11 @@ assert.match(pushRoute,/validatePushSubscriptionRegistration\(input\)/);
 assert.match(pushRoute,/validation\.monitorId\|\|createHash/);
 assert.doesNotMatch(pushRoute,/body\.monitorId\s*\|\|/,'unvalidated monitor IDs must not select persistence keys');
 
+const pushTestRoute=await fs.readFile(new URL('../app/api/push/test/route.ts',import.meta.url),'utf8');
+assert.match(pushTestRoute,/try\{input=await req\.json\(\);\}catch\{return NextResponse\.json\(\{error:'invalid_json'\},\{status:400\}\);\}/);
+assert.match(pushTestRoute,/validateMonitorRegistration\(input\)/);
+assert.match(pushTestRoute,/if\(!validation\.monitorId\)return NextResponse\.json\(\{error:'invalid_monitor_id'\},\{status:400\}\);/);
+assert.match(pushTestRoute,/getMonitor\(validation\.monitorId\)/);
+assert.doesNotMatch(pushTestRoute,/const\s*\{monitorId\}\s*=\s*await req\.json\(\)/,'push test must not look up unvalidated monitor IDs');
+
 console.log('monitor and push registration validation: ok');
