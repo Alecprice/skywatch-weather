@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "smoke:prod": "node scripts/smoke-production.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
