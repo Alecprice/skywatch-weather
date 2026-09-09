@@ -20,16 +20,24 @@ export async function sendPush(subscription: any, title: string, body: string, u
 
 export async function sendEmail(to: string | undefined, title: string, body: string) {
   if (!to || !process.env.RESEND_API_KEY || !process.env.ALERT_EMAIL_FROM) return { ok:false, reason:'email-not-configured' };
-  const res = await fetch('https://api.resend.com/emails', { method:'POST', headers:{ Authorization:`Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type':'application/json' }, body:JSON.stringify({ from:process.env.ALERT_EMAIL_FROM, to:[to], subject:title, text:body }) });
-  return { ok: res.ok, reason: res.ok ? undefined : `resend-${res.status}` };
+  try {
+    const res = await fetch('https://api.resend.com/emails', { method:'POST', headers:{ Authorization:`Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type':'application/json' }, body:JSON.stringify({ from:process.env.ALERT_EMAIL_FROM, to:[to], subject:title, text:body }) });
+    return { ok: res.ok, reason: res.ok ? undefined : `resend-${res.status}` };
+  } catch {
+    return { ok:false, reason:'email-transport-failed' };
+  }
 }
 
 export async function sendSms(to: string | undefined, body: string) {
   const sid=process.env.TWILIO_ACCOUNT_SID, token=process.env.TWILIO_AUTH_TOKEN, from=process.env.TWILIO_FROM_NUMBER;
   if (!to || !sid || !token || !from) return { ok:false, reason:'sms-not-configured' };
   const params = new URLSearchParams({ To:to, From:from, Body:body });
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { method:'POST', headers:{ Authorization:`Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`, 'Content-Type':'application/x-www-form-urlencoded' }, body:params });
-  return { ok: res.ok, reason: res.ok ? undefined : `twilio-${res.status}` };
+  try {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { method:'POST', headers:{ Authorization:`Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`, 'Content-Type':'application/x-www-form-urlencoded' }, body:params });
+    return { ok: res.ok, reason: res.ok ? undefined : `twilio-${res.status}` };
+  } catch {
+    return { ok:false, reason:'sms-transport-failed' };
+  }
 }
 
 export async function dispatchMonitorNotification(monitor:any, title:string, body:string, url='/', critical=false) {
