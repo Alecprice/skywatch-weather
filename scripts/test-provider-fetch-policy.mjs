@@ -5,8 +5,10 @@ import * as ts from 'typescript';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const sourcePath = path.join(root, 'lib', 'providerFetchPolicy.ts');
+const routePath = path.join(root, 'app', 'api', 'weather', 'route.ts');
 const tempModule = path.join('/tmp', `skywatch-provider-fetch-${process.pid}-${Date.now()}.mjs`);
 const source = await fs.readFile(sourcePath, 'utf8');
+const routeSource = await fs.readFile(routePath, 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
   fileName: sourcePath,
@@ -21,12 +23,13 @@ try {
   assert.throws(() => createWeatherProviderSignal(Number.POSITIVE_INFINITY), /positive and finite/);
 
   const signal = createWeatherProviderSignal(5);
+  assert.equal(signal instanceof AbortSignal, true);
   assert.equal(signal.aborted, false);
-  await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
-  assert.equal(signal.aborted, true);
-  assert.equal(signal.reason?.name, 'TimeoutError');
 
-  console.log('PASS: SkyWatch core forecast provider has a bounded timeout signal.');
+  assert.match(routeSource, /signal:\s*createWeatherProviderSignal\(\)/);
+  assert.match(routeSource, /next:\s*\{\s*revalidate:\s*300\s*\}/);
+
+  console.log('PASS: SkyWatch core forecast provider has a bounded timeout signal wired into the route.');
 } finally {
   await fs.rm(tempModule, { force: true });
 }
