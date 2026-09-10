@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseForecastCoordinates } from '@/lib/coordinatePolicy';
+import { createWeatherProviderSignal } from '@/lib/providerFetchPolicy';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   ].join(','));
 
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
+    const res = await fetch(url, { next: { revalidate: 300 }, signal: createWeatherProviderSignal() });
     if (!res.ok) throw new Error(`Forecast ${res.status}`);
     const data = await res.json();
     return NextResponse.json(data, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300' } });
