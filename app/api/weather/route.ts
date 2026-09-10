@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseForecastCoordinates } from '@/lib/coordinatePolicy';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const lat = Number(req.nextUrl.searchParams.get('lat'));
-  const lon = Number(req.nextUrl.searchParams.get('lon'));
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+  const coordinates = parseForecastCoordinates(
+    req.nextUrl.searchParams.get('lat'),
+    req.nextUrl.searchParams.get('lon'),
+  );
+  if (!coordinates) {
     return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 });
   }
+  const { lat, lon } = coordinates;
 
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', String(lat));
