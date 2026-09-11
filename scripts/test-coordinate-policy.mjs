@@ -5,8 +5,10 @@ import * as ts from 'typescript';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const sourcePath = path.join(root, 'lib', 'coordinatePolicy.ts');
+const alertsRoutePath = path.join(root, 'app', 'api', 'alerts', 'route.ts');
 const tempModule = path.join('/tmp', `skywatch-coordinate-policy-${process.pid}-${Date.now()}.mjs`);
 const source = await fs.readFile(sourcePath, 'utf8');
+const alertsRouteSource = await fs.readFile(alertsRoutePath, 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
   fileName: sourcePath,
@@ -28,7 +30,10 @@ try {
     assert.equal(parseForecastCoordinates(lat, lon), null);
   }
 
-  console.log('PASS: SkyWatch forecast coordinates reject missing and out-of-range values.');
+  assert.match(alertsRouteSource, /parseForecastCoordinates\(/);
+  assert.doesNotMatch(alertsRouteSource, /Number\(req\.nextUrl\.searchParams\.get\(['"]lat['"]\)\)/);
+
+  console.log('PASS: SkyWatch forecast and alert coordinates reject missing and out-of-range values.');
 } finally {
   await fs.rm(tempModule, { force: true });
 }

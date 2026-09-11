@@ -5,10 +5,12 @@ import * as ts from 'typescript';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const sourcePath = path.join(root, 'lib', 'providerFetchPolicy.ts');
-const routePath = path.join(root, 'app', 'api', 'weather', 'route.ts');
+const weatherRoutePath = path.join(root, 'app', 'api', 'weather', 'route.ts');
+const alertsRoutePath = path.join(root, 'app', 'api', 'alerts', 'route.ts');
 const tempModule = path.join('/tmp', `skywatch-provider-fetch-${process.pid}-${Date.now()}.mjs`);
 const source = await fs.readFile(sourcePath, 'utf8');
-const routeSource = await fs.readFile(routePath, 'utf8');
+const weatherRouteSource = await fs.readFile(weatherRoutePath, 'utf8');
+const alertsRouteSource = await fs.readFile(alertsRoutePath, 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
   fileName: sourcePath,
@@ -26,10 +28,12 @@ try {
   assert.equal(signal instanceof AbortSignal, true);
   assert.equal(signal.aborted, false);
 
-  assert.match(routeSource, /signal:\s*createWeatherProviderSignal\(\)/);
-  assert.match(routeSource, /next:\s*\{\s*revalidate:\s*300\s*\}/);
+  assert.match(weatherRouteSource, /signal:\s*createWeatherProviderSignal\(\)/);
+  assert.match(weatherRouteSource, /next:\s*\{\s*revalidate:\s*300\s*\}/);
+  assert.match(alertsRouteSource, /signal:\s*createWeatherProviderSignal\(\)/);
+  assert.match(alertsRouteSource, /next:\s*\{\s*revalidate:\s*60\s*\}/);
 
-  console.log('PASS: SkyWatch core forecast provider has a bounded timeout signal wired into the route.');
+  console.log('PASS: SkyWatch forecast and alert providers use the shared bounded timeout signal.');
 } finally {
   await fs.rm(tempModule, { force: true });
 }
